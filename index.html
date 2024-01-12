@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        const ws_endpoint = "ws://localhost:9501";
+    </script>
+    <meta charset="UTF-8">
+    <title>Caddylyser</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <style>
+        h1, h2 {
+            text-align: center;
+        }
+        #stats {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 4rem;
+        }
+        #charts {
+            display: flex;
+            flex-flow: row;
+            flex-wrap: wrap;
+            gap: 4rem;
+            justify-content: center;
+        }
+        #charts > div {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: calc(50% - 4rem);
+        }
+        #charts > div.small {
+            width: calc(33% - 4rem);
+        }
+    </style>
+</head>
+<body>
+    <h1>Caddylyser</h1>
+    <h2 id="loading_indicator">Loading Logs...</h2>
+    <header id="stats">
+        <span id="time_range"></span>
+        <span id="unique_ips"></span>
+        <span id="unique_endpoints"></span>
+        <span id="total_bandwidth"></span>
+        <span  id="request_count"></span>
+        <span id="success_rate"></span>
+        <span id="error_rate"></span>
+    </header>
+    <div>
+        <strong>Re-Render Delay:</strong>
+        <input id="re_render_delay" type="number" value="1000" min="0" step="1"><br>
+        <p>How long to wait (ms) before re-rendering charts and tables with new data.</p>
+    </div>
+    <div id="charts"></div>
+    <div id="modules"></div>
+    <script>
+        let ws;
+        ws = new WebSocket(ws_endpoint);
+        ws.onopen = function () {
+            document.getElementById('loading_indicator').innerText = 'Loading Modules...';
+        };
+        ws.onmessage = function (event) {
+            try {
+                document.data = JSON.parse(event.data);
+            } catch {}
+        };
+        ws.onclose = function (e) {
+            console.error(e);
+            ws = new WebSocket("wss://onion.ninja/socket");
+        }
+
+        const base_chart = (label, type) => {
+            return {
+                type: type,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        backgroundColor: type === 'line' ? "rgb(54, 162, 235)" : [
+                            "rgb(54, 162, 235)",
+                            "rgb(255, 99, 132)",
+                            "rgb(75, 192, 192)",
+                            "rgb(75, 192, 75)",
+                            "rgb(255, 205, 86)",
+                            "rgb(235, 139, 34)",
+                        ],
+                        borderColor: type === 'line' ? "rgb(54, 162, 235)" : [
+                            "rgb(54, 162, 235)",
+                            "rgb(255, 99, 132)",
+                            "rgb(75, 192, 192)",
+                            "rgb(75, 192, 75)",
+                            "rgb(255, 205, 86)",
+                            "rgb(235, 139, 34)",
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    fill: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            };
+        };
+
+        const grids = {}
+        const charts = {};
+
+        function setupChart (key, value) {
+            // Create Parent Div
+            const div = document.createElement('div')
+            if(value.size)
+                div.style.width = value.size;
+            document.getElementById('charts').appendChild(div);
+
+            // Create Chart
+            const e = document.createElement('canvas');
+            e.id = key;
+            e.setAttribute('data-type', value.type);
+            if (value.type === 'line')
+                e.classList.add('small');
+            div.appendChild(e)
+            charts[key] = new Chart(e.getContext('2d'), base_chart(key, e.getAttribute('data-type')));
+
+            // Create Heading
+            const heading = document.createElement('h2');
+            heading.innerHTML = key;
+            e.parentNode.insertBefore(heading, e);
+
+            // Create Table
+            const table = document.createElement('div');
+            table.id = `${key.replace('.', '_')}_table`;
+            e.parentNode.appendChild(table);
+
+            grids[key] = new gridjs.Grid({
+                columns: ["Value", "Count"],
+                sort: true,
+                resizable: true,
+                data: []
+            }).render(table);
+        }
+
+        function setupCharts (installedModules) {
+            for (const key of Object.keys(installedModules)) {
+                setupChart(key, installedModules[key]);
+            }
+        }
+
+        function setupModuleTable (availableModules, installedModules){
+            // sort availableModules by installed status
+            const sortedModules = Object.keys(availableModules).sort((a, b) => {
+                if (Object.keys(installedModules).includes(a) && !Object.keys(installedModules).includes(b))
+                    return -1;
+                if (!Object.keys(installedModules).includes(a) && Object.keys(installedModules).includes(b))
+                    return 1;
+                return 0;
+            });
+
+            // create table data
+            const modulesForTable = [];
+            for (const key of sortedModules) {
+                modulesForTable.push([
+                    key,
+                    Object.keys(installedModules).includes(key) ? 'Installed' : 'Uninstalled',
+                    null
+                ]);
+            }
+
+            return modulesForTable;
+        }
+
+        async function setupModules () {
+            if (typeof document.data !== 'object')
+                return setTimeout(setupModules, 1000);
+
+            const availableModules = document.data;
+            let installedModules;
+            if (Object.keys(JSON.parse(localStorage.getItem('modules') || "{}")).length)
+                installedModules = JSON.parse(localStorage.getItem('modules') || "{}");
+            else
+                installedModules = await (await fetch('modules.json')).json();
+            document.getElementById('loading_indicator').remove();
+
+            setupCharts(installedModules);
+
+            const modulesForTable = setupModuleTable(availableModules, installedModules)
+
+            window.moduleTable = new gridjs.Grid({
+                columns: [
+                    "Module",
+                    "Status",
+                    {
+                        name: 'Actions',
+                        formatter: (cell, row) => {
+                            return new gridjs.h('button', {
+                                style: {
+                                    background: row.cells[1].data === 'Installed' ? "rgb(255, 99, 132)" : "rgb(75, 192, 75)",
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.5rem'
+                                },
+                                onClick: (el) => {
+                                    // Toggle Module
+                                    if (el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText === 'Installed') { // Delete Module
+                                        try {
+                                            document.getElementById(row.cells[0].data).parentNode.remove();
+                                            delete installedModules[row.cells[0].data];
+                                        } catch(e) {
+                                            console.error(e);
+                                            alert('Failed to Delete Module');
+                                        }
+                                    } else { // Install Module
+                                        installedModules[row.cells[0].data] = {type: "doughnut"};
+                                        setupChart(row.cells[0].data, installedModules[row.cells[0].data]);
+                                    }
+
+                                    // Re-Render Table
+                                    window.moduleTable.plugin.remove('search');
+                                    window.moduleTable.updateConfig({
+                                        search: true,
+                                        data: setupModuleTable(availableModules, installedModules)
+                                    }).forceRender();
+
+                                    // Save Modules
+                                    localStorage.setItem('modules', JSON.stringify(installedModules));
+                                }
+                            }, row.cells[1].data === 'Installed' ? 'Delete' : 'Install');
+                        }
+                    },
+                    {
+                        name: 'Type',
+                        formatter: (cell, row) => {
+                            return new gridjs.h('select', {
+                                style: {
+                                    border: 'none',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.5rem'
+                                },
+                                onClick: (el) => {
+                                    // Update Module Type
+                                    if (installedModules[row.cells[0].data] === undefined)
+                                        installedModules[row.cells[0].data] = {type: el.target.value};
+                                    else
+                                        installedModules[row.cells[0].data].type = el.target.value;
+
+                                    // Re-Render Charts
+                                    document.getElementById(row.cells[0].data).parentNode.remove();
+                                    setupChart(row.cells[0].data, installedModules[row.cells[0].data], el.target.value);
+
+                                    // Save
+                                    localStorage.setItem('modules', JSON.stringify(installedModules));
+                                },
+                                disabled: row.cells[1].data === 'Uninstalled',
+                                innerHTML: `<option value='doughnut' ${row.cells[1].data === 'Installed' && (installedModules[row.cells[0].data] === undefined || installedModules[row.cells[0].data].type === 'doughnut' ? 'selected' : '')}>Doughnut</option><option value='pie' ${row.cells[1].data === 'Installed' && installedModules[row.cells[0].data] !== undefined && installedModules[row.cells[0].data].type === 'pie' ? 'selected' : ''}>Pie</option><option value='bar' ${row.cells[1].data === 'Installed' && installedModules[row.cells[0].data] !== undefined && installedModules[row.cells[0].data].type === 'bar' ? 'selected' : ''}>Bar</option><option value='line' ${row.cells[1].data === 'Installed' && installedModules[row.cells[0].data] !== undefined && installedModules[row.cells[0].data].type === 'line' ? 'selected' : ''}>Line</option>`
+                            });
+                        }
+                    },
+                    {
+                        name: 'Size',
+                        formatter: (cell, row) => {
+                            return new gridjs.h('input', {
+                                style: {
+                                    borderStyle: 'solid',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.5rem'
+                                },
+                                onchange: (el) => {
+                                    installedModules[row.cells[0].data].size = el.target.value;
+
+                                    // Re-Render Charts
+                                    document.getElementById(row.cells[0].data).parentNode.remove();
+                                    setupChart(row.cells[0].data, installedModules[row.cells[0].data]);
+
+                                    // Save
+                                    localStorage.setItem('modules', JSON.stringify(installedModules));
+                                },
+                                value: installedModules[row.cells[0].data] !== undefined ? installedModules[row.cells[0].data].size || 'calc(50% - 4rem)' : 'calc(50% - 4rem)',
+                                disabled: row.cells[1].data === 'Uninstalled',
+                            });
+                        }
+                    }
+                ],
+                search: true,
+                data: modulesForTable,
+                resize: true
+            }).render(document.getElementById('modules'));
+        }
+        setupModules();
+
+        function humanTime(seconds) {
+            seconds /= 1000;
+            const interval = [
+                Math.floor(seconds / 31536000),
+                Math.floor(seconds / 2592000) % 12,
+                Math.floor(seconds / 604800) % 4,
+                Math.floor(seconds / 86400) % 7,
+                Math.floor(seconds / 3600) % 24,
+                Math.floor(seconds / 60) % 60,
+                seconds % 60
+            ];
+            const interval_names = ['year', 'month', 'week', 'day', 'hour', 'minute', 'second'];
+            const interval_name = interval_names[interval.findIndex(e => e > 0)];
+            const interval_value = interval[interval.findIndex(e => e > 0)];
+            return interval_value + ' ' + interval_name + (interval_value > 1 ? 's' : '');
+        }
+
+        function humanSize(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const unit = units[Math.floor(Math.log(bytes) / Math.log(1024))];
+            return (bytes / Math.pow(1024, units.indexOf(unit))).toFixed(2) + ' ' + unit;
+        }
+
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        function parseCharts(runs=1){
+            const data = document.data;
+            if(data === undefined)
+                return setTimeout(() => parseCharts(runs+1), document.getElementById('re_render_delay').value);
+
+            const oldest_log = Math.min(...Object.keys(data['ts']));
+            const newest_log = Math.max(...Object.keys(data['ts']));
+
+            const requests = Object.values(data['level']).reduce((accumulator, currentValue) => {
+                return accumulator + currentValue;
+            }, 0);
+            document.getElementById('request_count').innerHTML = requests + ' Requests';
+            for (const key of Object.keys(data['level'])) {
+                if (document.getElementById(`request_${key}`) === null) {
+                    const el = document.createElement('span');
+                    el.innerHTML = data['level'][key] + ' ' + capitalizeFirstLetter(key === 'info' ? 'successful' : key) + ' Requests';
+                    el.id = `request_${key}`;
+                    document.getElementById('stats').appendChild(el);
+                    document.getElementById('stats').appendChild(document.createElement('br'));
+                } else {
+                    document.getElementById(`request_${key}`).innerHTML = data['level'][key] + ' ' + capitalizeFirstLetter(key === 'info' ? 'successful' : key) + ' Requests';
+                    document.getElementById('success_rate').innerHTML = (Math.round(1000 * data['level']['info'] / requests) / 10) + '% Success Rate';
+                    document.getElementById('error_rate').innerHTML = (Math.round(1000 * data['level']['error'] / requests) / 10) + '% Error Rate';
+                }
+            }
+            document.getElementById('time_range').innerHTML = new Date(oldest_log * 1000).toLocaleString() + ' - ' + new Date(newest_log * 1000).toLocaleString() + ' (' + humanTime(new Date(newest_log * 1000) - new Date(oldest_log * 1000)) + ')';
+            document.getElementById('unique_ips').innerHTML = Object.keys(data['request.remote_ip']).length + ' Unique IPs';
+            document.getElementById('unique_endpoints').innerHTML = [...new Set(Object.keys(data['request.uri']).map(string => string.split("?")[0].split("&")[0]))].length + ' Unique Endpoints';
+            document.getElementById('total_bandwidth').innerHTML = humanSize(Object.entries(document.data['size']).map(([key, value]) => {
+                return key * value;
+            }).reduce((accumulator, currentValue) => {
+                return accumulator + currentValue;
+            }, 0)) + " Bandwidth";
+
+            document.querySelectorAll('#charts canvas').forEach(e => {
+                let details = data[e.id];
+                if (details === undefined)
+                    return;
+                details = Object.fromEntries(Object.entries(details).sort(([,a],[,b]) => b-a));
+                charts[e.id].data.labels = Object.keys(details);
+                charts[e.id].data.datasets[0].data = Object.values(details);
+                charts[e.id].update();
+
+                let values = [];
+                for (const key of Object.keys(details)) {
+                    values.push([key, details[key]]);
+                }
+
+                grids[e.id].updateConfig({
+                    data: values.splice(0, 5)
+                });
+                if(runs % 6 === 0)
+                    grids[e.id].forceRender(document.getElementById(`${e.id.replace('.', '_')}_table`));
+            })
+            setTimeout(() => parseCharts(runs+1), document.getElementById('re_render_delay').value);
+        }
+        parseCharts();
+    </script>
+</body>
+</html>

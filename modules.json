@@ -1,0 +1,35 @@
+{
+    "status":  {
+        "type": "doughnut"
+    },
+    "request.uri": {
+        "type":  "line"
+    },
+    "request.method":  {
+        "type":  "bar"
+    },
+    "request.proto": {
+        "type":  "doughnut"
+    },
+    "request.host":  {
+        "type":  "doughnut"
+    },
+    "request.headers.User-Agent": {
+        "type":  "bar"
+    },
+    "request.headers.Referer": {
+        "type":  "line"
+    },
+    "request.headers.Accept-Language":  {
+        "type":  "pie"
+    },
+    "resp_headers.Cache-Control":  {
+        "type":  "doughnut"
+    },
+    "resp_headers.Pragma": {
+        "type":  "doughnut"
+    },
+    "resp_headers.Content-Type": {
+        "type": "doughnut"
+    }
+}

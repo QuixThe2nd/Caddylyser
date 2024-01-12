@@ -47,6 +47,21 @@ Then input the following into the last line:
 ### Caddylyser Frontend
 To set up the frontend, edit index.html, and set the `ws_endpoint` variable to your web socket. Ensure `modules.json` is in the same directory as index.html. You can now open index.html in your browser and start analysing!
 
+### modules.json (Optional)
+Each session on the dashboard has its own sandbox. Customisations only apply for that session. If you'd like to hardcode the default modules shown as well as their styling, you can edit the modules.json file. By default, 2 modules fit on a page, using the doughnut style. You can edit modules.json to change the default modules shown, the type of chart they are, and their size.
+```
+{
+    "status":  {
+        "type": "doughnut",
+        "size": "30%"
+    },
+    "request.uri":  {
+        "type": "line",
+        "size": "200px"
+    }
+}
+```
+
 ## Features
 Caddylyser was inspired by [GoAccess](https://goaccess.io). I've always loved the ease of use they provide for quickly analysing logs. But, I had a few things I didn't like about it, so I made this. All features below are based on my grievances with GoAccess.
 
@@ -75,7 +90,6 @@ Caddylyser writes the latest metrics to a resume file for later. This means if C
 
 ### Backlog Parsing
 One of my favourite features about Caddylyser is the backlog parsing. When you first run Caddylyser, instead of making you wait for all logs to be initially parsed, everything works as usual. You can use the Caddylyser and see live analytics, however delayed. Caddylyser will just keep scanning, starting from the oldest log, till it eventually reaches the end of the log file.
-
 
 ## Remarks
 I hope you find this project useful in some way. I'm not a designer, so the UI on the app is unfinished. If you find Caddylyser useful or just like the idea of it, please considering helping improve the design :)

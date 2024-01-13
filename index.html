@@ -63,9 +63,10 @@
             document.getElementById('loading_indicator').innerText = 'Loading Modules...';
         };
         ws.onmessage = function (event) {
-            try {
+            if(event.data.startsWith('Log:'))
+                console.log(event.data.replace('Log:', ''));
+            else
                 document.data = JSON.parse(event.data);
-            } catch {}
         };
         ws.onclose = function (e) {
             console.error(e);
@@ -211,6 +212,8 @@
                                     // Toggle Module
                                     if (el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText === 'Installed') { // Delete Module
                                         try {
+                                            el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText = 'Uninstalled'
+                                            el.target.style.background = "rgb(75, 192, 75)"
                                             document.getElementById(row.cells[0].data).parentNode.remove();
                                             delete installedModules[row.cells[0].data];
                                         } catch(e) {
@@ -218,6 +221,8 @@
                                             alert('Failed to Delete Module');
                                         }
                                     } else { // Install Module
+                                        el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText = 'Installed'
+                                        el.target.style.background = "rgb(255, 99, 132)"
                                         installedModules[row.cells[0].data] = {type: "doughnut"};
                                         setupChart(row.cells[0].data, installedModules[row.cells[0].data]);
                                     }

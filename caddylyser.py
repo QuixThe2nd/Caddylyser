@@ -9,7 +9,8 @@ connected_clients = set()
 
 def flatten_object(obj, parent_key=''):
     items = []
-    obj.url = obj['request']['host'] + obj['request']['uri']
+    if 'request' in obj and 'host' in obj['request'] and 'uri' in obj['request']:
+        obj['request']['url'] = obj['request']['host'] + obj['request']['uri']
     for key, value in obj.items():
         new_key = f"{parent_key}.{key}" if parent_key else key
         if isinstance(value, dict):
@@ -34,17 +35,21 @@ def output(message):
 
 
 def analyse_logs(last_ts=0, start_line=0):
+    output('Log: Analysing logs...')
     lines = []
     with open('access.log', 'r') as file:
-        for i in range(start_line+100):
+        print('Log: Pulling ' + str(start_line+1000) + ' logs')
+        for i in range(start_line+1000):
             line = file.readline()
             if not line:
                 break
             lines.append(line)
 
+    print('Log: Parsing ' + str(len(lines)) + ' logs')
     if len(lines[-1]) == 0:
         lines = lines[:-1]
 
+    print('Log: Skipping some Logs')
     if last_ts:
         valid_lines = []
         for line in lines:
@@ -61,18 +66,18 @@ def analyse_logs(last_ts=0, start_line=0):
         return analyse_logs(last_ts, start_line)
 
     for line in lines:
+        i += 1
         try:
             data = json.loads(line)
-
-            if not line or len(line) == 0 or 'logger' not in data or data['logger'] != 'http.log.access':
-                continue
-
-            flatten_object(data)
-            output(json.dumps(result))
-        except Exception as e:
-            print(e)
+        except:
             continue
 
+        if not line or len(line) == 0 or 'logger' not in data or data['logger'] != 'http.log.access':
+            continue
+
+        flatten_object(data)
+
+    output(json.dumps(result))
     new_save = {
         'output': result if result else {},
         'last_ts': json.loads(lines[-1])['ts'] if 'ts' in json.loads(lines[-1]) else last_ts,

@@ -29,6 +29,23 @@ for file in os.listdir(os.path.join(PATH, 'addons')):
 
 print('Log: Imported ' + str(len(addons)) + ' addons')
 
+with open(LOG_PATH, 'r') as file:
+    line = file.readline()
+
+    found_addon = False
+    for addon in addons:
+        try:
+            if addon.match(line):
+                found_addon = addon
+                break
+        except Exception as e:
+            print('Error: Addon ' + addon.__name__ + ' crashed on match', e)
+            pass
+
+    if not found_addon:
+        print('Error: No addon found for line')
+        exit()
+
 result = {}
 connected_clients = set()
 last_save = None
@@ -140,20 +157,6 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
         i += 1
         read_bytes += len(line)
         data = {}
-
-        found_addon = False
-        for addon in addons:
-            try:
-                if addon.match(line):
-                    found_addon = addon
-                    break
-            except Exception as e:
-                print('Error: Addon ' + addon.__name__ + ' crashed on match', e)
-                pass
-
-        if not found_addon:
-            output('Error: No addon found for line')
-            continue
 
         try:
             data = found_addon.handler(line)

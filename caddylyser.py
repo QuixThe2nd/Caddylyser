@@ -57,7 +57,7 @@ def flatten_object(obj, parent_key=''):
         if isinstance(value, dict):
             if len(value) == 0:
                 continue
-            flatten_object(value, new_key, depth+1)
+            flatten_object(value, new_key)
         else:
             if new_key not in result:
                 result[new_key] = {}
@@ -77,19 +77,29 @@ def output(message):
     stdout.flush()
 
 
-def analyse_logs(last_ts=0, start_line=0):
-    output('Log: Analysing logs...')
+def read_next_lines(file_path, start_byte, line_count):
     lines = []
-    with open('access.log', 'r') as file:
-        print('Log: Pulling ' + str(start_line+1000) + ' logs')
-        for i in range(start_line+1000):
+    with open(file_path, 'r') as file:
+        file.seek(start_byte)
+        for _ in range(line_count):
             line = file.readline()
             if not line:
                 break
             lines.append(line)
 
-    print('Log: Parsing ' + str(len(lines)) + ' logs')
-    if len(lines[-1]) == 0:
+
+def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
+    output('Log: Reading Logs From Byte ' + str(read_bytes))
+
+    try:
+        lines = read_next_lines(os.path.dirname(__file__) + '/access.log', read_bytes, 1000)
+    except:
+        output('Error: Cannot read access.log')
+        sleep(1)
+        return analyse_logs(last_ts, start_line, read_bytes)
+
+    output('Log: Removing empty lines')
+    if len(lines) != 0 and len(lines[-1]) == 0:
         lines = lines[:-1]
 
     print('Log: Skipping some Logs')
@@ -106,7 +116,7 @@ def analyse_logs(last_ts=0, start_line=0):
 
     if len(lines) == 0 or (len(lines) == 1 and len(lines[0]) == 0):
         sleep(1)
-        return analyse_logs(last_ts, start_line)
+        return analyse_logs(last_ts, start_line, read_bytes)
 
     for line in lines:
         i += 1
@@ -150,13 +160,14 @@ def analyse_logs(last_ts=0, start_line=0):
 
     new_save = {
         'output': result if result else {},
-        'last_ts': json.loads(lines[-1])['ts'] if 'ts' in json.loads(lines[-1]) else last_ts,
-        'start_line': start_line+len(lines)
+        'last_ts': data['ts'] if 'ts' in data else last_ts,
+        'start_line': start_line+len(lines),
+        'read_bytes': read_bytes
     }
     with open(os.path.dirname(__file__) + '/caddylyser.queue.save', 'w') as file:
         file.write(json.dumps(new_save))
 
-    return analyse_logs(json.loads(lines[-1])['ts'], start_line+len(lines))
+    return analyse_logs(data['ts'], start_line+len(lines), read_bytes)
 
 
 try:
@@ -168,7 +179,8 @@ try:
                 output(json.dumps(result))
                 restored_last_ts = save['last_ts']
                 restored_start_line = save['start_line']
-                analyse_logs(restored_last_ts, restored_start_line)
+                restored_read_bytes = save['read_bytes']
+                analyse_logs(restored_last_ts, restored_start_line, restored_read_bytes)
             except:
                 analyse_logs()
     else:

@@ -36,10 +36,13 @@ def flatten_object(obj, parent_key=''):
     if 'request' in obj and 'headers' in obj['request'] and 'Accept-Language' in obj['request']['headers'] and len(obj['request']['headers']['Accept-Language']) > 0:
         obj['caddylyser']['language'] = obj['request']['headers']['Accept-Language'][0].split(',')[0].split(';')[0].split('-')[0].lower()
 
+        # Flatten
     for key, value in obj.items():
         new_key = f"{parent_key}.{key}" if parent_key else key
         if isinstance(value, dict):
-            flatten_object(value, new_key)
+            if len(value) == 0:
+                continue
+            flatten_object(value, new_key, depth+1)
         else:
             if new_key not in result:
                 result[new_key] = {}

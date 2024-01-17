@@ -19,6 +19,8 @@ PATH = os.path.dirname(__file__)
 for file in os.listdir(os.path.join(PATH, 'addons')):
     if file.endswith('.py'):
         addon_name = file[:-3]  # remove '.py' extension
+        if addon_name == 'boilerplate':
+            continue
         addon_path = os.path.join(PATH, 'addons', file)
         spec = importlib.util.spec_from_file_location(addon_name, addon_path)
         addon = importlib.util.module_from_spec(spec)

@@ -6,7 +6,6 @@ def match(log):
 
 def handler(log):
     data = json.loads(log)
-    print(data)
 
     if not data or len(data) == 0 or 'logger' not in data or data['logger'] != 'http.log.access':
         return False

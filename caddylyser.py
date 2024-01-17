@@ -155,8 +155,6 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
             output('Error: No addon found for line')
             continue
 
-        print(addon.__name__)
-
         try:
             data = found_addon.handler(line)
         except Exception as e:

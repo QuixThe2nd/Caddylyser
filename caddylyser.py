@@ -9,8 +9,33 @@ connected_clients = set()
 
 def flatten_object(obj, parent_key=''):
     items = []
+
+    obj['caddylyser'] = {}
+    # Remap Values
+    if 'duration' in obj:
+        if isinstance(obj['duration'], list):
+            rounded = math.ceil(obj['duration'][0]*10)/10
+        else:
+            rounded = math.ceil(obj['duration']*10)/10
+        obj['duration'] = rounded
+    if 'ts' in obj:
+        if isinstance(obj['ts'], list):
+            rounded = math.ceil(obj['ts'][0])
+        else:
+            rounded = math.ceil(obj['ts'])
+        obj['ts'] = rounded
     if 'request' in obj and 'host' in obj['request'] and 'uri' in obj['request']:
-        obj['request']['url'] = obj['request']['host'] + obj['request']['uri']
+        obj['caddylyser']['url'] = obj['request']['host'] + obj['request']['uri']
+    if 'request' in obj and 'headers' in obj['request'] and 'Referer' in obj['request']['headers'] and len(obj['request']['headers']['Referer']) > 0:
+        obj['caddylyser']['RefererDomain'] = urlparse(obj['request']['headers']['Referer'][0]).netloc
+    #     obj['caddylyser']['source'] = urlparse(obj['request']['headers']['Referer'][0]).netloc
+    # else:
+    #     obj['caddylyser']['source'] = 'direct'
+    #     pass
+    # obj['caddylyser']['source'] = urlparse(obj['request']['headers']['Referer'][0]).netloc if 'request' in obj and 'headers' in obj['request'] and 'Referer' in obj['request']['headers'] and len(obj['request']['headers']['Referer']) > 0 else 'direct'
+    if 'request' in obj and 'headers' in obj['request'] and 'Accept-Language' in obj['request']['headers'] and len(obj['request']['headers']['Accept-Language']) > 0:
+        obj['caddylyser']['language'] = obj['request']['headers']['Accept-Language'][0].split(',')[0].split(';')[0].split('-')[0].lower()
+
     for key, value in obj.items():
         new_key = f"{parent_key}.{key}" if parent_key else key
         if isinstance(value, dict):

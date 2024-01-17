@@ -3,9 +3,16 @@
 <head>
     <script>
         const ws_endpoint = "ws://localhost:9501";
+        // Required
+
+        // Config
+        const dont_sort = ['date']; // ALL modules that match any keyword listed wont be sorted by occurrences, they'll be sorted by key instead
     </script>
     <meta charset="UTF-8">
     <title>Caddylyser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.css" rel="stylesheet" />
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
@@ -35,43 +42,200 @@
         #charts > div.small {
             width: calc(33% - 4rem);
         }
+        .show_on_load {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <h1>Caddylyser</h1>
-    <h2 id="loading_indicator">Loading Logs...</h2>
-    <header id="stats">
-        <span id="time_range"></span>
-        <span id="unique_ips"></span>
-        <span id="unique_endpoints"></span>
-        <span id="total_bandwidth"></span>
-        <span  id="request_count"></span>
-        <span id="success_rate"></span>
-        <span id="error_rate"></span>
-    </header>
-    <div>
-        <strong>Re-Render Delay:</strong>
-        <input id="re_render_delay" type="number" value="1000" min="0" step="1"><br>
-        <p>How long to wait (ms) before re-rendering charts and tables with new data.</p>
+    <nav class="bg-white dark:bg-gray-900 sticky w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
+        <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+            <h1 class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Caddylyser</h1>
+            <div class="flex md:order-2">
+                <div class="relative hidden md:block">
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+                        <span class="sr-only">Search icon</span>
+                    </div>
+                    <input type="text" id="search-navbar" class="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search...">
+                </div>
+            </div>
+            <div class="items-center justify-between hidden w-full md:flex md:w-auto md:order-1">
+                <ul class="flex flex-col p-4 md:p-0 mt-4 font-medium border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
+                    <li>
+                        <a href="#stats" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Stats</a>
+                    </li>
+                    <li>
+                        <a href="#charts" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Charts</a>
+                    </li>
+                    <li>
+                        <a href="#modules" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Modules</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="grid grid-cols-6">
+        <aside class="h-screen bg-gray-50 dark:bg-gray-800">
+            <div class="fixed h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-800 pt-4 w-[17%]">
+                <ul class="space-y-2 font-medium" id="nav_charts"></ul>
+            </div>
+        </aside>
+        <div class="col-span-5 px-4">
+            <h2 id="loading_indicator">Loading Logs...</h2>
+
+            <div class="show_on_load">
+                <div style="display: flex; justify-content: space-evenly">
+                    <div>
+                        Parsed Logs:
+                        <span class="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded me-2 dark:bg-gray-700 dark:text-gray-400 border border-gray-500 my-4">
+                            <svg class="w-2.5 h-2.5 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/></svg>
+                            <span id="time_range"></span>
+                        </span>
+                    </div>
+                    <div>
+                        Log Parse Rate:
+                        <span class="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded me-2 dark:bg-gray-700 dark:text-gray-400 border border-gray-500 my-4">
+                            <svg class="w-2.5 h-2.5 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/></svg>
+                            <span id="log_parse_rate"></span>
+                        </span>
+                    </div>
+                    <div>
+                        Log Parse ETA:
+                        <span class="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded me-2 dark:bg-gray-700 dark:text-gray-400 border border-gray-500 my-4">
+                            <svg class="w-2.5 h-2.5 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/></svg>
+                            <span id="log_parse_eta"></span>
+                        </span>
+                    </div>
+                </div>
+
+
+                <div class="w-full bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+                    <header class="p-4 bg-white rounded-lg md:p-8 dark:bg-gray-800">
+                        <dl id="stats" class="grid max-w-screen-xl grid-cols-2 gap-8 p-4 mx-auto text-gray-900 sm:grid-cols-3 xl:grid-cols-6 dark:text-white sm:p-8">
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="unique_ips">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Unique IPs</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="unique_endpoints">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Unique Endpoints</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="total_bandwidth">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Bandwidth</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="request_count">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="requests_per_second">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests/s</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="requests_per_minute">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests/m</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="requests_per_hour">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests/h</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="requests_per_day">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests/d</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="requests_per_week">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests/w</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="requests_per_month">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Requests/m (30d)</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="success_rate">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Success Rate</dd>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <dt class="mb-2 text-3xl font-extrabold" id="error_rate">N/A</dt>
+                                <dd class="text-gray-500 dark:text-gray-400">Error Rate</dd>
+                            </div>
+                        </dl>
+                    </header>
+                </div>
+
+                <div id="hidden_ips_box" class="flex items-center p-4 my-4 text-yellow-800 rounded-lg bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300 none" role="alert">
+                    <svg class="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/></svg>
+                    <span class="sr-only">Info</span>
+                    <div class="ms-3 text-sm font-medium" id="hidden_ips"></div>
+                    <button type="button" class="ms-auto -mx-1.5 -my-1.5 bg-yellow-50 text-yellow-500 rounded-lg focus:ring-2 focus:ring-yellow-400 p-1.5 hover:bg-yellow-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-yellow-300 dark:hover:bg-gray-700" data-dismiss-target="#hidden_ips_box" aria-label="Close">
+                        <span class="sr-only">Close</span>
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/></svg>
+                    </button>
+                </div>
+                <div id="config" class="grid grid-cols-2 gap-4">
+                    <div class="flex items-center content-center gap-4" style="flex-wrap:wrap">
+                        <label for="re_render_delay" class="block text-sm font-medium text-gray-900 dark:text-white">Re-Render Delay</label>
+                        <input id="re_render_delay" type="number" value="1000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <p>How long to wait (ms) before re-rendering charts and tables with new data.</p><br>
+                    </div>
+
+                    <div class="flex items-center content-center gap-4" style="flex-wrap:wrap">
+                        <label for="max_rendering_size" class="block text-sm font-medium text-gray-900 dark:text-white">Max Rendering Size</label>
+                        <input id="max_rendering_size" type="number" value="5000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <p>How many log entries are processed when rendering charts and tables.</p>
+                    </div>
+                </div>
+                <div id="charts"></div>
+                <div id="modules"></div>
+            </div>
+        </div>
     </div>
-    <div id="charts"></div>
-    <div id="modules"></div>
     <script>
+        document.getElementById('search-navbar').addEventListener('input', function () {
+            document.querySelectorAll('#charts > div').forEach(e => {
+                if(e.getElementsByTagName('h2')[0].innerText.toLowerCase().includes(this.value.toLowerCase())){
+                    console.log(e);
+                    console.log('Success', e.getElementsByTagName('h2')[0].innerText.toLowerCase());
+                    e.classList.remove('none');
+                    e.style.display = 'initial';
+                }else{
+                    console.log('Failed');
+                    e.classList.add('none');
+                    e.style.display = 'none';
+                }
+            });
+        });
+
         let ws;
-        ws = new WebSocket(ws_endpoint);
-        ws.onopen = function () {
-            document.getElementById('loading_indicator').innerText = 'Loading Modules...';
-        };
-        ws.onmessage = function (event) {
-            if(event.data.startsWith('Log:'))
-                console.log(event.data.replace('Log:', ''));
-            else
-                document.data = JSON.parse(event.data);
-        };
-        ws.onclose = function (e) {
-            console.error(e);
-            ws = new WebSocket("wss://onion.ninja/socket");
+        function connectWebSocket() {
+            ws = new WebSocket(ws_endpoint);
+
+            ws.onopen = function () {
+                document.getElementById('loading_indicator').innerText = 'Loading Modules...';
+                window.start_time = undefined;
+            };
+
+            ws.onmessage = function (event) {
+                if (event.data.startsWith('Log:'))
+                    console.log(event.data.replace('Log:', ''));
+                else
+                    document.data = JSON.parse(event.data);
+            };
+
+            ws.onclose = function (e) {
+                console.error('WebSocket closed. Attempting to reconnect...', e);
+                setTimeout(connectWebSocket, 1000);
+            };
+
+            ws.onerror = function (err) {
+                console.error('WebSocket encountered error: ', err.message, 'Closing WebSocket');
+                ws.close();
+            };
         }
+
+        connectWebSocket();
 
         const base_chart = (label, type) => {
             return {
@@ -117,7 +281,7 @@
         function setupChart (key, value) {
             // Create Parent Div
             const div = document.createElement('div')
-            if(value.size)
+            if ('size' in value)
                 div.style.width = value.size;
             document.getElementById('charts').appendChild(div);
 
@@ -134,6 +298,11 @@
             const heading = document.createElement('h2');
             heading.innerHTML = key;
             e.parentNode.insertBefore(heading, e);
+
+            // Create Badge
+            const badge = document.createElement('span');
+            badge.id = "badge_" + key.replace('.', '_');
+            e.parentNode.insertBefore(badge, e);
 
             // Create Table
             const table = document.createElement('div');
@@ -177,17 +346,76 @@
             return modulesForTable;
         }
 
+        function setupNavbar (installedModules, el=document.getElementById('nav_charts'), step=0) {
+            Object.keys(installedModules).forEach(key => {
+                const li = document.createElement('li');
+                if (key.split('.').length - 1 > step) {
+                    const obj = {};
+                    obj[key] = installedModules[key];
+
+                    if (document.getElementById(key.split('.').splice(0, step+1).join('_'))) {
+                        setupNavbar(obj, document.getElementById(key.split('.').splice(0, step+1).join('_')), step + 1);
+                        return;
+                    }
+
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.classList.add('flex', 'items-center', 'w-full', 'p-2', 'text-base', 'text-gray-900', 'transition', 'duration-75', 'rounded-lg', 'group', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-700');
+                    button.addEventListener('click', {
+                        handleEvent: function () {
+                            const target = document.getElementById(key.split('.').splice(0, step+1).join('_'));
+                            if (target.classList.contains('hidden'))
+                                target.classList.remove('hidden');
+                            else
+                                target.classList.add('hidden');
+                        }
+                    })
+                    button.innerHTML = `<span class="flex-1 text-left rtl:text-right whitespace-nowrap">${key.split('.')[step]}</span><svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/></svg>`;
+                    if (step)
+                        button.classList.add('ml-' + (3*step));
+                    li.appendChild(button);
+
+                    const ul = document.createElement('ul');
+                    ul.classList.add('py-2', 'space-y-2', 'hidden');
+                    ul.id = key.split('.').splice(0, step+1).join('_');
+                    li.appendChild(ul);
+                    el.appendChild(li);
+
+                    setupNavbar(obj, ul, step + 1);
+                } else {
+                    const a = document.createElement('a');
+                    a.href = `#${key}`;
+                    a.innerText = key.split('.').slice(-1)[0];
+                    a.classList.add('flex', 'items-center', 'p-2', 'text-gray-900', 'rounded-lg', 'dark:text-white', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'group')
+                    if (step)
+                        a.classList.add('ml-' + (3*step));
+
+                    li.appendChild(a);
+                    el.appendChild(li);
+                }
+            });
+        }
+
         async function setupModules () {
-            if (typeof document.data !== 'object')
+            const availableModules = document.data;
+            if (typeof availableModules !== 'object')
                 return setTimeout(setupModules, 1000);
 
-            const availableModules = document.data;
             let installedModules;
             if (Object.keys(JSON.parse(localStorage.getItem('modules') || "{}")).length)
                 installedModules = JSON.parse(localStorage.getItem('modules') || "{}");
             else
                 installedModules = await (await fetch('modules.json')).json();
-            document.getElementById('loading_indicator').remove();
+            document.querySelectorAll('.show_on_load').forEach(e => {
+                e.style.display = 'initial';
+            })
+            document.getElementById('loading_indicator').classList.add('hidden');
+
+            await setupNavbar(installedModules);
+
+            const script = document.createElement('script');
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js";
+            document.head.appendChild(script);
 
             setupCharts(installedModules);
 
@@ -212,27 +440,39 @@
                                     // Toggle Module
                                     if (el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText === 'Installed') { // Delete Module
                                         try {
-                                            el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText = 'Uninstalled'
-                                            el.target.style.background = "rgb(75, 192, 75)"
-                                            document.getElementById(row.cells[0].data).parentNode.remove();
+                                            el.target.innerText = 'Install';
+                                            el.target.style.background = "rgb(75, 192, 75)";
+                                            el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText = 'Uninstalled';
+                                            el.target.parentElement.parentElement.querySelector('select').setAttribute('disabled', 'true');
+                                            el.target.parentElement.parentElement.querySelector('input').setAttribute('disabled', 'true');
+                                            if(document.getElementById(row.cells[0].data))
+                                                document.getElementById(row.cells[0].data).parentNode.remove();
                                             delete installedModules[row.cells[0].data];
                                         } catch(e) {
                                             console.error(e);
                                             alert('Failed to Delete Module');
                                         }
                                     } else { // Install Module
-                                        el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText = 'Installed'
-                                        el.target.style.background = "rgb(255, 99, 132)"
-                                        installedModules[row.cells[0].data] = {type: "doughnut"};
-                                        setupChart(row.cells[0].data, installedModules[row.cells[0].data]);
+                                        try {
+                                            el.target.innerText = 'Delete';
+                                            el.target.style.background = "rgb(255, 99, 132)";
+                                            el.target.parentElement.parentElement.querySelectorAll('td')[1].innerText = 'Installed';
+                                            el.target.parentElement.parentElement.querySelector('select').removeAttribute('disabled');
+                                            el.target.parentElement.parentElement.querySelector('input').removeAttribute('disabled');
+                                            installedModules[row.cells[0].data] = {type: "doughnut"};
+                                            setupChart(row.cells[0].data, installedModules[row.cells[0].data]);
+                                        } catch(e) {
+                                            console.error(e);
+                                            alert('Failed to Install Module');
+                                        }
                                     }
 
                                     // Re-Render Table
-                                    window.moduleTable.plugin.remove('search');
-                                    window.moduleTable.updateConfig({
-                                        search: true,
-                                        data: setupModuleTable(availableModules, installedModules)
-                                    }).forceRender();
+                                    // window.moduleTable.plugin.remove('search');
+                                    // window.moduleTable.updateConfig({
+                                    //     search: true,
+                                    //     data: setupModuleTable(availableModules, installedModules)
+                                    // }).forceRender();
 
                                     // Save Modules
                                     localStorage.setItem('modules', JSON.stringify(installedModules));
@@ -295,7 +535,8 @@
                 ],
                 search: true,
                 data: modulesForTable,
-                resize: true
+                resize: true,
+                sort: true
             }).render(document.getElementById('modules'));
         }
         setupModules();
@@ -328,44 +569,110 @@
         }
 
         function parseCharts(runs=1){
-            const data = document.data;
-            if(data === undefined)
-                return setTimeout(() => parseCharts(runs+1), document.getElementById('re_render_delay').value);
+            let data = document.data;
+            if(data === undefined || document.lastData === data)
+                return setTimeout(() => parseCharts(runs+1), 1000);
+            document.lastData = document.data;
 
+            const requests = Object.values(data['level']).reduce((a, b) => a+b, 0);
+
+            if (window.start_time === undefined) {
+                window.start_time = Date.now();
+                window.start_logs = requests;
+            }
+
+            // Stats
             const oldest_log = Math.min(...Object.keys(data['ts']));
             const newest_log = Math.max(...Object.keys(data['ts']));
 
-            const requests = Object.values(data['level']).reduce((accumulator, currentValue) => {
-                return accumulator + currentValue;
-            }, 0);
-            document.getElementById('request_count').innerHTML = requests + ' Requests';
+            document.getElementById('request_count').innerHTML = requests;
+            if(new Date(newest_log * 1000) - new Date(oldest_log * 1000) > 1000)
+                document.getElementById('requests_per_second').innerHTML = (requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000).toFixed(2);
+            if(new Date(newest_log * 1000) - new Date(oldest_log * 1000) > 1000 * 60)
+                document.getElementById('requests_per_minute').innerHTML = (requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000 * 60).toFixed(2);
+            if(new Date(newest_log * 1000) - new Date(oldest_log * 1000) > 1000 * 60 * 60)
+                document.getElementById('requests_per_hour').innerHTML = (requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000 * 60 * 60).toFixed(2);
+            if(new Date(newest_log * 1000) - new Date(oldest_log * 1000) > 1000 * 60 * 60 * 24)
+                document.getElementById('requests_per_day').innerHTML = (requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000 * 60 * 60 * 24).toFixed(2);
+            if(new Date(newest_log * 1000) - new Date(oldest_log * 1000) > 1000 * 60 * 60 * 24 * 7)
+                document.getElementById('requests_per_week').innerHTML = (requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000 * 60 * 60 * 24 * 7).toFixed(2);
+            if(new Date(newest_log * 1000) - new Date(oldest_log * 1000) > 1000 * 60 * 60 * 24 * 30)
+                document.getElementById('requests_per_month').innerHTML = (requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000 * 60 * 60 * 24 * 30).toFixed(2);
             for (const key of Object.keys(data['level'])) {
                 if (document.getElementById(`request_${key}`) === null) {
-                    const el = document.createElement('span');
-                    el.innerHTML = data['level'][key] + ' ' + capitalizeFirstLetter(key === 'info' ? 'successful' : key) + ' Requests';
-                    el.id = `request_${key}`;
-                    document.getElementById('stats').appendChild(el);
-                    document.getElementById('stats').appendChild(document.createElement('br'));
+                    const div = document.createElement('div');
+                    div.id = `request_${key}`;
+                    div.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
+                    div.innerHTML = `<dt class="mb-2 text-3xl font-extrabold">${data['level'][key]}</dt><dd class="text-gray-500 dark:text-gray-400">${capitalizeFirstLetter(key === 'info' ? 'successful' : key)} Log Entries</dd>`;
+                    document.getElementById('stats').appendChild(div);
                 } else {
-                    document.getElementById(`request_${key}`).innerHTML = data['level'][key] + ' ' + capitalizeFirstLetter(key === 'info' ? 'successful' : key) + ' Requests';
-                    document.getElementById('success_rate').innerHTML = (Math.round(1000 * data['level']['info'] / requests) / 10) + '% Success Rate';
-                    document.getElementById('error_rate').innerHTML = (Math.round(1000 * data['level']['error'] / requests) / 10) + '% Error Rate';
+                    document.getElementById(`request_${key}`).innerHTML = `<dt class="mb-2 text-3xl font-extrabold">${data['level'][key]}</dt><dd class="text-gray-500 dark:text-gray-400">${capitalizeFirstLetter(key === 'info' ? 'successful' : key)} Log Entries</dd>`;
+                    document.getElementById('success_rate').innerHTML = Math.round(100 * data['level']['info'] / requests).toFixed(2) + '%';
+                    document.getElementById('error_rate').innerHTML = Math.round(100 * data['level']['error'] / requests).toFixed(2) + '%';
                 }
             }
+
+            const log_parse_rate = Math.round((requests - window.start_logs) / (Date.now() - window.start_time) * 1000).toFixed(2);
+            // How many logs hve been parsed
+            const new_log_rate = requests / (new Date(newest_log * 1000) - new Date(oldest_log * 1000)) * 1000;
+            const time_till_present = (Date.now() - new Date(newest_log * 1000)) / 1000;
+            const approximate_remaining_logs = time_till_present * new_log_rate;
+            const approximate_remaining_time = approximate_remaining_logs / log_parse_rate * 1000;
             document.getElementById('time_range').innerHTML = new Date(oldest_log * 1000).toLocaleString() + ' - ' + new Date(newest_log * 1000).toLocaleString() + ' (' + humanTime(new Date(newest_log * 1000) - new Date(oldest_log * 1000)) + ')';
-            document.getElementById('unique_ips').innerHTML = Object.keys(data['request.remote_ip']).length + ' Unique IPs';
-            document.getElementById('unique_endpoints').innerHTML = [...new Set(Object.keys(data['request.uri']).map(string => string.split("?")[0].split("&")[0]))].length + ' Unique Endpoints';
+            document.getElementById('log_parse_rate').innerHTML = log_parse_rate + " Entries/s";
+            document.getElementById('log_parse_eta').innerHTML = humanTime(approximate_remaining_time);
+
+            // Max rendering Size
+            const newData = {}
+            for (const key of Object.keys(data)) {
+                newData[key] = {};
+                let i = 0;
+                for (const key2 of Object.keys(data[key])) {
+                    newData[key][key2] = data[key][key2];
+                    i++;
+                    if (i >= document.getElementById('max_rendering_size').value)
+                        break;
+                }
+            }
+            data = newData
+
+            // IPs
+            let normal_ip_found = false;
+            let i = 0;
+            for (const ip of Object.keys(data['request.headers.Cf-Connecting-Ip'] || data['request.remote_ip'])) {
+                i += (data['request.headers.Cf-Connecting-Ip'] || data['request.remote_ip'])[ip];
+                if (!ip.endsWith('.0.0') && !ip.endsWith('::')) {
+                    normal_ip_found = true;
+                    break;
+                }
+            }
+            if(i !== 0) {
+                document.getElementById('hidden_ips_box').classList.remove('none');
+                document.getElementById('hidden_ips').innerHTML = (normal_ip_found ? 'Some' : 'All') + ' IP addresses seen in logs seem to be masked. ' + i + ' IPs were found to be masked. IP related statistics may be inaccurate.';
+            }
+            document.getElementById('unique_ips').innerHTML = Object.keys(data['request.headers.Cf-Connecting-Ip'] || data['request.remote_ip']).length;
+            document.getElementById('unique_endpoints').innerHTML = [...new Set(Object.keys(data['request.uri']).map(string => string.split("?")[0].split("&")[0]))].length;
             document.getElementById('total_bandwidth').innerHTML = humanSize(Object.entries(document.data['size']).map(([key, value]) => {
                 return key * value;
             }).reduce((accumulator, currentValue) => {
                 return accumulator + currentValue;
-            }, 0)) + " Bandwidth";
+            }, 0));
 
+            // Charts
             document.querySelectorAll('#charts canvas').forEach(e => {
                 let details = data[e.id];
                 if (details === undefined)
                     return;
-                details = Object.fromEntries(Object.entries(details).sort(([,a],[,b]) => b-a));
+
+                let sort = true;
+                for (const dont_sort_key of dont_sort) {
+                    if (e.id.toLowerCase().includes(dont_sort_key.toLowerCase())) {
+                        sort = false;
+                        break;
+                    }
+                }
+                if(sort)
+                    details = Object.fromEntries(Object.entries(details).sort(([,a],[,b]) => b-a));
                 charts[e.id].data.labels = Object.keys(details);
                 charts[e.id].data.datasets[0].data = Object.values(details);
                 charts[e.id].update();
@@ -378,12 +685,26 @@
                 grids[e.id].updateConfig({
                     data: values.splice(0, 5)
                 });
+
+                // badge -
+                const count = Object.values(details).reduce((a, b) => a+b);
+                document.getElementById('badge_' + e.id.replace('.', '_')).innerHTML = count + ' ' + (count === 1 ? 'entry' : 'entries') + ' (' + (100*count/Object.values(data['level']).reduce((a, b) => a+b, 0)).toFixed(2) + '%)';
+
                 if(runs % 6 === 0)
                     grids[e.id].forceRender(document.getElementById(`${e.id.replace('.', '_')}_table`));
             })
             setTimeout(() => parseCharts(runs+1), document.getElementById('re_render_delay').value);
         }
         parseCharts();
+
+        async function test() {
+            for (el of document.querySelectorAll('#oaipmhimport a')) {
+                await new Promise(r => setTimeout(r, 1000));
+                const link = el.href;
+                console.log(link);
+            }
+        }
+        test();
     </script>
 </body>
 </html>

@@ -2,6 +2,21 @@ import json
 import os
 from time import sleep
 from sys import stdout
+import importlib.util
+
+addons = []
+
+PATH = os.path.dirname(__file__)
+for file in os.listdir(os.path.join(PATH, 'addons')):
+    if file.endswith('.py'):
+        addon_name = file[:-3]  # remove '.py' extension
+        addon_path = os.path.join(PATH, 'addons', file)
+        spec = importlib.util.spec_from_file_location(addon_name, addon_path)
+        addon = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(addon)
+        addons.append(addon)
+
+print('Log: Imported ' + str(len(addons)) + ' addons')
 
 result = {}
 connected_clients = set()
@@ -95,12 +110,29 @@ def analyse_logs(last_ts=0, start_line=0):
 
     for line in lines:
         i += 1
-        try:
-            data = json.loads(line)
-        except:
+        data = {}
+
+        found_addon = True
+        for addon in addons:
+            try:
+                if addon.match(line):
+                    found_addon = True
+                    break
+            except Exception as e:
+                print('Error: Addon ' + addon.__name__ + ' crashed on match', e)
+                pass
+
+        if not found_addon:
+            output('Error: No addon found for line')
             continue
 
-        if not line or len(line) == 0 or 'logger' not in data or data['logger'] != 'http.log.access':
+        try:
+            data = addon.handler(line)
+        except Exception as e:
+            print('Error: Addon ' + addon.__name__ + ' crashed on handler', e)
+            data = False
+        if not data:
+            output('Error: Addon ' + addon.__name__ + ' failed to parse line')
             continue
 
         flatten_object(data)

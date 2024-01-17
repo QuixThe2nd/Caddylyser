@@ -2,9 +2,16 @@ import json
 import math
 import os
 from time import sleep
-from sys import stdout
+import sys
 from urllib.parse import urlparse
 import importlib.util
+
+args = sys.argv[1:]
+log_path = args[0] if len(args) > 0 else os.path.dirname(__file__) + '/access.log'
+LOG_PATH = os.path.abspath(log_path)
+if not os.path.isfile(LOG_PATH):
+    print('Error: Log file not found')
+    exit(1)
 
 addons = []
 
@@ -77,7 +84,7 @@ def flatten_object(obj, parent_key=''):
 
 def output(message):
     print(message)
-    stdout.flush()
+    sys.stdout.flush()
 
 
 def read_next_lines(file_path, start_byte, line_count):
@@ -96,9 +103,9 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
     output('Log: Reading Logs From Byte ' + str(read_bytes))
 
     try:
-        lines = read_next_lines(os.path.dirname(__file__) + '/access.log', read_bytes, 1000)
+        lines = read_next_lines(LOG_PATH, read_bytes, 1000)
     except:
-        output('Error: Cannot read access.log')
+        output('Error: Cannot read log')
         sleep(1)
         return analyse_logs(last_ts, start_line, read_bytes)
 
@@ -159,7 +166,7 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
 
     output(json.dumps(result))
 
-    if os.path.isfile(os.path.dirname(__file__) + '/caddylyser.queue.save') and os.path.getsize(os.path.dirname(__file__) + '/access.log'):
+    if os.path.isfile(os.path.dirname(__file__) + '/caddylyser.queue.save') and os.path.getsize(LOG_PATH):
         with open(os.path.dirname(__file__) + '/caddylyser.queue.save', 'r') as queue_item:
             queue_item = queue_item.read()
             if len(queue_item) and queue_item[0] == '{' and queue_item[-1] == '}':

@@ -2,7 +2,7 @@ import json
 
 
 def match(log):
-    return log.startswith('{') and log.endswith('}')
+    return log.startswith('{')
 
 def handler(log):
     data = json.loads(log)

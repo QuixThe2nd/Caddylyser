@@ -4,7 +4,7 @@ import time as time_module
 
 
 def match(log):
-    return re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", log)
+    return re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", log) is not None
 
 def handler(log):
     regex = r"(.+) - - \[(.+)] \"([A-Z]+) (.+) (.+)\" (\d+) (\d+) \"(.+)\" \"(.*)\" \"(.+)\" \"-\""

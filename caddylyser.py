@@ -1,7 +1,9 @@
 import json
+import math
 import os
 from time import sleep
 from sys import stdout
+from urllib.parse import urlparse
 import importlib.util
 
 addons = []
@@ -20,6 +22,7 @@ print('Log: Imported ' + str(len(addons)) + ' addons')
 
 result = {}
 connected_clients = set()
+last_save = None
 
 
 def flatten_object(obj, parent_key=''):
@@ -86,6 +89,7 @@ def read_next_lines(file_path, start_byte, line_count):
             if not line:
                 break
             lines.append(line)
+    return lines
 
 
 def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
@@ -102,7 +106,7 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
     if len(lines) != 0 and len(lines[-1]) == 0:
         lines = lines[:-1]
 
-    print('Log: Skipping some Logs')
+    output('Log: Skipping some Logs')
     if last_ts:
         valid_lines = []
         for line in lines:
@@ -115,11 +119,17 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
         lines = valid_lines
 
     if len(lines) == 0 or (len(lines) == 1 and len(lines[0]) == 0):
+        output('Log: No lines to parse')
         sleep(1)
         return analyse_logs(last_ts, start_line, read_bytes)
 
+    output('Log: Parsing ' + str(len(lines)) + ' lines')
+
+    i = 0
+    data = {}
     for line in lines:
         i += 1
+        read_bytes += len(line)
         data = {}
 
         found_addon = True

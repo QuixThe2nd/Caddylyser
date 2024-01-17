@@ -219,6 +219,7 @@
 
 				ws.onmessage = function (event) {
 					if (event.data.startsWith('Log:')) console.log(event.data.replace('Log:', ''));
+					else if (event.data.startsWith('Error:')) console.replace(event.data.replace('Error:', ''));
 					else document.data = JSON.parse(event.data);
 				};
 

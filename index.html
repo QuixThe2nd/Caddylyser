@@ -82,6 +82,25 @@
 			<div class="col-span-5 px-4">
 				<h2 id="loading_indicator">Loading Logs...</h2>
 
+				<div id="config" class="grid grid-cols-2 gap-4">
+					<div class="flex items-center content-center gap-4" style="flex-wrap: wrap">
+						<label for="re_render_delay" class="block text-sm font-medium text-gray-900 dark:text-white">Re-Render Delay</label>
+						<input id="re_render_delay" type="number" value="1000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+						<p>How long to wait (ms) before re-rendering charts and tables with new data.</p><br />
+					</div>
+
+					<div class="flex items-center content-center gap-4" style="flex-wrap: wrap">
+						<label for="max_rendering_size" class="block text-sm font-medium text-gray-900 dark:text-white">Max Rendering Size</label>
+						<input id="max_rendering_size" type="number" value="5000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+						<p>How many log entries are processed when rendering charts and tables.</p>
+					</div>
+
+					<div class="flex items-center content-center gap-4" style="flex-wrap: wrap">
+						<label for="websocket_endpoint" class="block text-sm font-medium text-gray-900 dark:text-white">WebSocket Endpoint</label>
+						<input value="ws://localhost:9051" id="websocket_endpoint" type="number" value="5000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+						<p>Backend to collect stats from.</p>
+					</div>
+				</div>
 				<div class="show_on_load">
 					<div style="display: flex; justify-content: space-evenly">
 						<div>
@@ -170,25 +189,6 @@
 							<span class="sr-only">Close</span>
 							<svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" /></svg>
 						</button>
-					</div>
-					<div id="config" class="grid grid-cols-2 gap-4">
-						<div class="flex items-center content-center gap-4" style="flex-wrap: wrap">
-							<label for="re_render_delay" class="block text-sm font-medium text-gray-900 dark:text-white">Re-Render Delay</label>
-							<input id="re_render_delay" type="number" value="1000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-							<p>How long to wait (ms) before re-rendering charts and tables with new data.</p><br />
-						</div>
-
-						<div class="flex items-center content-center gap-4" style="flex-wrap: wrap">
-							<label for="max_rendering_size" class="block text-sm font-medium text-gray-900 dark:text-white">Max Rendering Size</label>
-							<input id="max_rendering_size" type="number" value="5000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-							<p>How many log entries are processed when rendering charts and tables.</p>
-						</div>
-
-						<div class="flex items-center content-center gap-4" style="flex-wrap: wrap">
-							<label for="websocket_endpoint" class="block text-sm font-medium text-gray-900 dark:text-white">WebSocket Endpoint</label>
-							<input value="ws://localhost:9051" id="websocket_endpoint" type="number" value="5000" min="0" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-							<p>Backend to collect stats from.</p>
-						</div>
 					</div>
 					<div id="charts"></div>
 					<div id="modules"></div>

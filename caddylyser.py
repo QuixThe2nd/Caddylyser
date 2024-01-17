@@ -103,12 +103,22 @@ def analyse_logs(last_ts=0, start_line=0):
         flatten_object(data)
 
     output(json.dumps(result))
+
+    if os.path.isfile(os.path.dirname(__file__) + '/caddylyser.queue.save') and os.path.getsize(os.path.dirname(__file__) + '/access.log'):
+        with open(os.path.dirname(__file__) + '/caddylyser.queue.save', 'r') as queue_item:
+            queue_item = queue_item.read()
+            if len(queue_item) and queue_item[0] == '{' and queue_item[-1] == '}':
+                global last_save
+                last_save = queue_item
+                with open(os.path.dirname(__file__) + '/caddylyser.save', 'w') as file:
+                    file.write(queue_item)
+
     new_save = {
         'output': result if result else {},
         'last_ts': json.loads(lines[-1])['ts'] if 'ts' in json.loads(lines[-1]) else last_ts,
         'start_line': start_line+len(lines)
     }
-    with open(os.path.dirname(__file__) + '/caddylyser.save', 'w') as file:
+    with open(os.path.dirname(__file__) + '/caddylyser.queue.save', 'w') as file:
         file.write(json.dumps(new_save))
 
     return analyse_logs(json.loads(lines[-1])['ts'], start_line+len(lines))

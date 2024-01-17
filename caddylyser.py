@@ -165,6 +165,7 @@ try:
             try:
                 save = json.loads(file.read())
                 result = save['output']
+                output(json.dumps(result))
                 restored_last_ts = save['last_ts']
                 restored_start_line = save['start_line']
                 analyse_logs(restored_last_ts, restored_start_line)

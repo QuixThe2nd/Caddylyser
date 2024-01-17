@@ -141,11 +141,11 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
         read_bytes += len(line)
         data = {}
 
-        found_addon = True
+        found_addon = False
         for addon in addons:
             try:
                 if addon.match(line):
-                    found_addon = True
+                    found_addon = addon
                     break
             except Exception as e:
                 print('Error: Addon ' + addon.__name__ + ' crashed on match', e)
@@ -158,12 +158,12 @@ def analyse_logs(last_ts=0, start_line=0, read_bytes=0):
         print(addon.__name__)
 
         try:
-            data = addon.handler(line)
+            data = found_addon.handler(line)
         except Exception as e:
-            print('Error: Addon ' + addon.__name__ + ' crashed on handler', e)
+            print('Error: Addon ' + found_addon.__name__ + ' crashed on handler', e)
             data = False
         if not data:
-            output('Error: Addon ' + addon.__name__ + ' failed to parse line: ' + line)
+            output('Error: Addon ' + found_addon.__name__ + ' failed to parse line')
             continue
 
         flatten_object(data)

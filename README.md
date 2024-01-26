@@ -85,6 +85,7 @@ Caddylyser has a built-in module system. Modules are sourced from metrics that a
 ### Automatic Module Gathering
 
 Modules are automatically created. They just _appear_. As Caddylyser processes more logs, it finds new modules that might be of interest. For example, each request and response header seen in the logs gets given its own module. It's up to you if you use it or not. This creates great extensibility no matter your use case. For example, if you use Cloudflare, you will see geo-location modules start appearing. Another great example is cache. When you cache an endpoint you're passing certain headers, for example, `Cache-Control`. Caddylyser will automatically create a module called `resp_headers.Cache-Control` showing your cache coverage after it sees the header in your logs.
+
 <img width="490" alt="image" src="https://github.com/QuixThe2nd/Caddylyser/assets/25378634/0827c1b1-00f2-418c-a6c0-0f507e68adc7"><img width="490" alt="image" src="https://github.com/QuixThe2nd/Caddylyser/assets/25378634/f192ea67-69a5-46fa-8975-ebfd6ffe88aa">
 
 ### Customisation

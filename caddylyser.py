@@ -30,7 +30,10 @@ for file in os.listdir(os.path.join(PATH, 'addons')):
 print('Log: Imported ' + str(len(addons)) + ' addons')
 
 with open(LOG_PATH, 'r') as file:
-    line = file.readline()
+    for i in range(1,10):
+        line = file.readline()
+        if len(line.strip()) > 0:
+            break
 
     found_addon = False
     for addon in addons:
